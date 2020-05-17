@@ -1,0 +1,10 @@
+The following python libraries are required:
+
+numpy
+scipy
+pandas
+scikit-learn
+pyfits
+matplotlib
+astropy
+requests

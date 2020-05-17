@@ -18,6 +18,7 @@ from active_cnn import data
 from active_cnn import model
 from active_cnn import preprocessing
 from activecnn import activeCnn
+import matplotlib.pyplot as plt
 
 __LINK_TEMPLATE = string.Template('<option selected id="${spectrum_name}_link" style="background-color:${background_color};">${spectrum_name}</option>\n')
 __script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -26,11 +27,10 @@ __script_dir = os.path.dirname(os.path.realpath(__file__))
 def main():
     if len(sys.argv) < 2:
         raise ValueError('Must pass at least one input file')
-    for file in sys.argv[1:]:
-        run_preprocessing(file)
+    for json_config_file in sys.argv[1:]:
+        run_active_learning(json_config_file)
 
-
-def _generate_spectra(spectra,database_index,metadata_df,classes,prediction_file,random_sample_size,oracle_size,cat_list,metadata2show,iteration_num,spectra2add_fname,labels2add_fname,raw_spectra_source,statistics):
+def _generate_spectra(folder_prefix,folder,spectra,database_index,metadata_df,classes,prediction_file,random_sample_size,oracle_size,cat_list,metadata2show,iteration_num,spectra2add_fname,labels2add_fname,raw_spectra_source,statistics,learning_session_name):
     with open(__script_dir + "/spectra_list.html.template") as template_file:
         html_template = string.Template(template_file.read())
     n_display_limit = 1000
@@ -135,7 +135,7 @@ def _generate_spectra(spectra,database_index,metadata_df,classes,prediction_file
                            metadata_row.append(oracle_perfest)
                         else:
                            metadata_row.append(p)
-                        print(p)
+                        #print(p)
                      except:
                         metadata_row.append('')
                 if i <= n_display_limit:
@@ -178,65 +178,101 @@ def _generate_spectra(spectra,database_index,metadata_df,classes,prediction_file
                   comment_list.append(hit['_source']['comment'])
                except:
                   comment_list.append('')
-    categories = spectra.columns.values.tolist()
-    if categories[-1] == 'class':
-        categories_str = json.dumps(categories[:-1])
-
-        html_code = html_template.substitute(
-            {"list": "".join(spectra_list), "comments": comment,"cats": categories_str,"fname": fname,"statistics":statistics,"prediction": prediction,"oracle_perfest": oracle_perfest,"raw_spectra_source":raw_spectra_source})
-    else:
-        categories_str = json.dumps(categories)
-        html_code = html_template.substitute({"list": "".join(spectra_list), "labels2add_fname": labels2add_fname,"spectra2add_fname":spectra2add_fname,"md": metadata,"comments": comment_list,"cats": categories_str,"fname": fname_list,"statistics":statistics,"prediction": prediction_list,"cat": cat_list,"lab": label_list,"oracle_perf": oracle_perfest_list,"random_sample_size": random_sample_size,"oracle_size": oracle_size,"mdcols": metadata2show,"raw_spectra_source":raw_spectra_source})
+    metadata_csv=folder_prefix+folder+learning_session_name + '/metadata_' + str(iteration_num) + '.csv'
+    with open(metadata_csv,"w+") as md_csv:
+       csvWriter = csv.writer(md_csv,delimiter=',')
+       csvWriter.writerow(metadata2show)
+       csvWriter.writerows(metadata)
+    wavelengths = spectra.columns.values.tolist()
+    wavelengths_str = json.dumps(wavelengths)
+    html_code = html_template.substitute({"list": "".join(spectra_list),"folder":folder,"session":learning_session_name,"itnum":iteration_num,
+"labels2add_fname": labels2add_fname,"spectra2add_fname":spectra2add_fname,"md": metadata,"comments": comment_list,"wavelengths": wavelengths_str,"fname": fname_list,"statistics":statistics,"prediction": prediction_list,"cat": cat_list,"lab": label_list,"oracle_perf": oracle_perfest_list,"random_sample_size": random_sample_size,"oracle_size": oracle_size,"mdcols": metadata2show,"raw_spectra_source":raw_spectra_source})
     try:
         spectra.to_csv("spectra.txt", header=False, index=False, sep=",")
     except Exception as e:
         print(e)
     return html_code
 
-def save_to_database(labels2add_csv,cat_list):
+def number_of_lines(file):
+    numlines = 0
+    try:
+       f = open(file,"r")
+       b = f.readline()
+       while b:
+          b = f.readline()
+          numlines = numlines+1
+       f.close()
+    except Exception as e:
+        print(e)
+    return numlines
+
+def write_statistics(iteration_num,cat_list,statistics_csv,statistics,perf_est_from_previous_iteration):
+    numlines = number_of_lines(statistics_csv)
+    f= open(statistics_csv,"a+")
+    if numlines==0:
+        f.write('iteration,')
+        for cat in cat_list:
+            f.write(cat + ',')
+        f.write('performance\n')
+    if numlines==1:
+       f.write(str(iteration_num)+',')
+       for stat in statistics:
+          f.write(str(stat)+',')
+    if numlines>1:
+       f.write(str(perf_est_from_previous_iteration)+'\n')
+       f.write(str(iteration_num)+',')
+       for stat in statistics:
+          f.write(str(stat)+',')
+    try:
+       statistics_df = pd.read_csv(statistics_csv)
+    except:
+       statistics_df=[]
+    return statistics_df
+
+def plot_statistics(statistics_all):
+    ax = plt.axes(xlabel='iteration', ylabel='estimated accuracy')
+    ax.plot(statistics_all['iteration'].head(-1),statistics_all['performance'].head(-1),'x')
+    plt.savefig('performance.pdf')
+
+def save_to_database(labels2add_csv,cat_list,previous_iteration_spectra_file,learning_session_name,database_index):
     es=Elasticsearch([{'host':'localhost','port':9200}])
-    f=open(labels2add_csv,'r')
-    b=f.readline()
-    while len(b)>1:
+    f1=open(labels2add_csv,'r')
+    b=f1.readline()
+    f2=open(previous_iteration_spectra_file,'r')
+    c=f2.readline()
+    c=f2.readline()
+    if (len(c))<2:
+       c=f2.readline()
+    while len(b)>1 and len(c)>1:
         b_array = b.split(',')
-        fname = b_array[0]
-        if len(b_array) > 2:
-            if b_array[2]=="undefined":
+        c_array = c.split(',')
+        fname = c_array[0]
+        if len(b_array) > 1:
+            if b_array[1]=="undefined":
                 comment=""
             else:
-                comment = b_array[2]
+                comment = b_array[1]
         else:
             comment = ""
-        if len(b_array) > 1:
-            label_num = int(b_array[1])
-        else:
-            label_num = len(cat_list)-1
-        label = cat_list[label_num]
-        res= es.search(index='lamost-dr5-v3',body={'query':{'match':{'filename':fname}}},size=1)
-        if res['hits']['total'] > 0:
-            for hit in res['hits']['hits']:
-                filename= hit['_source']['filename']
-                if filename==fname:
-                     idb = hit['_id']
-                     es.update(index='lamost-dr5-v3',doc_type='doc',id=idb,body={"doc": {"label": label, "comment": comment }})
-        b=f.readline()
-    f.close()
-
-def to_votable(data, file_name):
-    votable = VOTableFile()
-    resource = Resource()
-    votable.resources.append(resource)
-    table = Table(votable)
-    resource.tables.append(table)
-    columns = data.columns
-    if data.columns[-1] == 'class':
-        columns = columns[:-1]
-    fields = [Field(votable, name="placeholder", datatype="char", arraysize='*'),
-        Field(votable, name="intensities", datatype="double", arraysize='*')]
-    table.fields.extend(fields)
-    table.create_arrays(1)
-    table.array[0] = ("placeholder", columns.tolist())
-    votable.to_xml(file_name)
+        if len(b_array) > 0:
+            try:
+               label_num = int(b_array[0])
+               label = cat_list[label_num]
+               res= es.search(index=database_index,body={'query':{'match':{'filename':fname}}},size=1)
+               if res['hits']['total'] > 0:
+                  for hit in res['hits']['hits']:
+                     filename= hit['_source']['filename']
+                     if filename==fname:
+                        idb = hit['_id']
+                        es.update(index=database_index,doc_type='doc',id=idb,body={"doc": {"learning_session": learning_session_name,"label": label, "comment": comment,"label_"+learning_session_name: label, "comment_"+learning_session_name: comment}})
+            except:
+               print(fname+" not labelled.")
+        b=f1.readline()
+        c=f2.readline()
+        if len(c)<2:
+           c=f2.readline()
+    f1.close()
+    f2.close()
 
 def label_random_samples(json_dict):
     poolnames=""
@@ -255,12 +291,8 @@ def label_random_samples(json_dict):
     if 'poolnames_csv' in json_dict:
         poolnames_csv = json_dict['poolnames_csv']
         poolnames = pd.read_csv(poolnames_csv, index_col='id')
-    elif 'csv_spectra_file_names' in json_dict:
-        poolnames_csv = json_dict['csv_spectra_file_names']
-        poolnames = pd.read_csv(poolnames_csv, index_col='id')
     else:
         poolnames_csv = pool_csv
-        csv_spectra_file_names = pool_csv
         poolnames = pd.read_csv(pool_csv, index_col='id')
     ids = poolnames.index.values
     rnd_idx = np.random.choice(ids, size=batch_size)
@@ -271,73 +303,128 @@ def label_random_samples(json_dict):
     rand_csv = 'rand.csv'
     return rand_csv
 
-def run_preprocessing(input_file):
+def run_active_learning(json_config_file):
     json_dict = None
-    normalize = do_binning = remove_duplicates = False
-    with open(input_file, 'r') as f:
+    with open(json_config_file, 'r') as f:
         json_dict = json.load(f)
+    folder_prefix = '/data/vocloud/filesystem/DATA/'
+    classes = []
+    statistics = []
+    statistics_all = []
+    pe=""
+    normalize = do_binning = remove_duplicates = False
+    if 'learning_session_name' in json_dict:
+        learning_session_name = json_dict['learning_session_name']
+    else:
+        learning_session_name = 'single_double_peak'
+        print('No learning_session_name defined, switching to default: single_double_peak')  
+    if 'folder' in json_dict:
+        folder = json_dict['folder']
+    else:
+        folder = 'active-learning/'
+    if 'database_index' in json_dict:
+        database_index = json_dict['database_index']
+    else:
+        database_index = 'lamost-dr5-v3' 
+    if 'iteration_num' in json_dict:
+        iteration_num = int(json_dict['iteration_num'])
+    else:
+        iteration_num = 0
+    if 'categories' in json_dict:
+        cat_list = json_dict['categories']
+    elif 'classes' in json_dict:
+        cat_list = json_dict['classes']
+    else:
+        cat_list = ["other","single peak","double peak"]
+    if 'candidate_classes' in json_dict:
+        candidate_classes = json_dict['candidate_classes']
+    else:
+        candidate_classes = cat_list[-1]
+    if 'classes' in json_dict:
+         classes=json_dict['classes']
+    if 'random_sample_size' in json_dict:
+        random_sample_size = int(json_dict['random_sample_size'])
+    else:
+        random_sample_size = 3
+	if random_sample_size < 3:
+		random_sample_size = 3
+		print('Random sample size adjusted to minimum = 3.')
+    if 'batch_size' in json_dict:
+        batch_size = int(json_dict['batch_size'])
+    else:
+        batch_size = 10
+	if batch_size < 10:
+		batch_size = 10
+		print('Batch size adjusted to minimum = 10.')	
     if 'normalize' in json_dict:
         normalize = json_dict['normalize']
     if 'binning' in json_dict:
         do_binning = json_dict['binning']
     if 'remove_duplicates' in json_dict:
         remove_duplicates = json_dict['remove_duplicates']
-    classes = []
-    statistics = []
-    if 'classes' in json_dict:
-         classes=json_dict['classes']
 
-    performance_estimation_csv='perf-est.csv'
-    oracle_csv=[]
-    run_active_learning = []
-    training_set_csv = ""
-    learning_session_name = 'single_double_peak'
-    if 'database_index' in json_dict:
-        database_index = json_dict['database_index']
-    else:
-        database_index = 'lamost-dr5-v3'
-    if 'learning_session_name' in json_dict:
-        learning_session_name = json_dict['learning_session_name']
-    if 'iteration_num' in json_dict:
-        iteration_num = int(json_dict['iteration_num'])
-    else:
-        iteration_num = 0
     spectra2add_fname = 'spectra2add_' + learning_session_name + '_' + str(iteration_num) + '.csv' 
-    if 'spectra2add_filename' in json_dict:
-        spectra2add_fname = spectra2add_filename
     labels2add_fname = 'labels_' + learning_session_name + '_' + str(iteration_num) + '.csv'
-    if 'labels2add_filename' in json_dict:
-        labels2add_fname = json_dict['labels2add_filename']
+    labels2add = folder_prefix + folder + learning_session_name + '/labels_' + str(iteration_num-1) + '.csv'
+    previous_iteration_spectra_file2 = folder_prefix + folder + learning_session_name + '/spectra2add_' + str(iteration_num-1)+'.csv'
     if 'training_set_csv' in json_dict:
            training_set_csv = json_dict['training_set_csv']
-    if 'training_set_addition_csv' in json_dict:
-        training_set_addition_csv = json_dict['training_set_addition_csv']
-        if 'training_set_csv' in json_dict:
-           training_set_csv = json_dict['training_set_csv']
-           training_set_csv_orig = training_set_csv[0:len(training_set_csv)-4]+'_orig.csv'
-           cmd = "cp '{0}' '{1}' ".format(training_set_csv,training_set_csv_orig)
-           os.system(cmd)
-           cmd = "tail -n+2 '{0}' >> '{1}'".format(training_set_addition_csv,training_set_csv)
-           os.system(cmd)
-        else:
-           json_dict['training_set_csv']=training_set_addition_csv
-    if 'candidates_csv' in json_dict:
-        candidates_csv = json_dict['candidates_csv']
+    else:
+           training_set_csv = folder_prefix + folder + 'training-set-'+learning_session_name+'.csv'
+    if not(os.path.exists(training_set_csv)):
+        os.system("touch '{0}'".format(training_set_csv))
+        cmd = "head -n1 '{0}' > '{1}'".format(folder_prefix + '/active-learning/training-set.csv',training_set_csv)
+        os.system(cmd)
+    if iteration_num > -1 or 'training_set_csv' in json_dict:
+           try:
+                  new_folder = folder_prefix + folder + learning_session_name
+                  if not(os.path.exists(new_folder)):
+                     cmd = "mkdir '{0}'".format(new_folder)
+                     os.system(cmd)
+                  training_set_csv1 = new_folder + '/training-set_0.csv'
+           except:
+                  training_set_csv1=training_set_csv[0:len(training_set_csv)-4]+'_0.csv'
+           if not(os.path.exists(training_set_csv1)):
+                  cmd = "cp '{0}' '{1}'".format(training_set_csv,training_set_csv1)
+                  os.system(cmd)
+    if iteration_num > 0:
+       training_set_csv_old = training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num-1)+'.csv'
+       training_set_csv_new = training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num)+'.csv'
+       if not(os.path.exists(training_set_csv_new)):
+           try:
+              training_set_addition_csv = "training_set_addition.csv"
+              pe=dh.prepare_spectra2add(previous_iteration_spectra_file2,labels2add,training_set_addition_csv,batch_size)
+              cmd = "cp '{0}' '{1}' ".format(training_set_csv_old,training_set_csv_new)
+              os.system(cmd)
+              cmd = "tail -n+2 '{0}' >> '{1}'".format(training_set_addition_csv,training_set_csv_new)
+              os.system(cmd)
+              save_to_database(labels2add,cat_list,previous_iteration_spectra_file2,learning_session_name,database_index)
+           except Exception as e:
+              print (e)
+              os.system("cp '{0}' '{1}' ".format(training_set_csv_old,training_set_csv_new))
+       training_set_csv=training_set_csv_new
+       metadata_csv_old=folder_prefix+folder+learning_session_name + '/metadata_' + str(iteration_num-1) + '.csv'
+       try:
+          md_old = pd.read_csv(metadata_csv_old,header=0)
+          labels = pd.read_csv(labels2add,usecols=[0])
+          labels.loc[-1] = ['label']
+          md_old['label'] = labels
+          md_old.to_csv(metadata_csv_old,header=True)
+       except Exception as e:
+                print (e)
     if 'show_candidates' in json_dict:
         show_candidates = json_dict['show_candidates']
     else:
         show_candidates = "no"
     if 'performance_estimation_csv' in json_dict:
         performance_estimation_csv = json_dict['performance_estimation_csv']
+    else:
+        performance_estimation_csv='perf-est.csv'
     if 'oracle_csv' in json_dict:
         oracle_csv = json_dict['oracle_csv']
     else:
         oracle_csv = "oracle.csv"
     to_label_csv = oracle_csv
-    if 'categories' in json_dict:
-        cat_list = json_dict['categories']
-    else:
-        cat_list = ["other","single peak","double peak"]
     if 'labels2add_csv' in json_dict:
         labels2add_csv = json_dict['labels2add_csv']
         save_to_database(labels2add_csv,cat_list)
@@ -349,21 +436,31 @@ def run_preprocessing(input_file):
         metadata2import = json_dict['metadata2import']
     else:
         metadata2import = ["id","obsid","designation","obsdate","lmjd","mjd","planid","spid","fiberid","ra_obs","dec_obs","snru","snrg","snrr","snri","snrz","objtype","class","subclass","z","z_err","magtype","mag1","mag2","mag3","mag4","mag5","mag6","mag7","tsource","fibertype","tfrom","tcomment","offsets","offset_v","ra","dec","fibermask"]
+    poolnames_csv=""
+    if 'poolnames_csv' in json_dict:
+        poolnames_csv = json_dict['poolnames_csv']
+    pool_csv = ""
+    if 'pool_csv' in json_dict:
+        pool_csv = json_dict['pool_csv']
+        if poolnames_csv=="": poolnames_csv=pool_csv
+
+    statistics_csv = folder_prefix + folder + learning_session_name + '/statistics.csv'
     if 'run_active_learning' in json_dict:
         run_active_learning = json_dict['run_active_learning']
         if run_active_learning=='y' or run_active_learning=='yes' or run_active_learning=='ano': 
-           if training_set_csv == "":
+           if training_set_csv == "" or iteration_num==0:
               oracle_csv=label_random_samples(json_dict)
               to_label_csv = oracle_csv
            else:
-              statistics=activeCnn()
+              statistics=activeCnn(pool_csv,training_set_csv,len(cat_list),cat_list,candidate_classes,batch_size,random_sample_size)
+              statistics_all = write_statistics(iteration_num,cat_list,statistics_csv,statistics,pe)
+              try:
+                   plot_statistics(statistics_all)
+              except:
+                   print("Not enough data to plot performance.")
               to_label_csv = 'to_label_csv.csv'
               cmd = "cat '{0}' '{1}' > '{2}'".format(oracle_csv,performance_estimation_csv,to_label_csv)
               os.system(cmd)
-    if 'random_sample_size' in json_dict:
-        random_sample_size = int(json_dict['random_sample_size'])
-    else: 
-           random_sample_size=0
     try:
         to_label_size = sum(1 for line in open(to_label_csv))
         oracle_size = sum(1 for line in open(oracle_csv))
@@ -379,29 +476,14 @@ def run_preprocessing(input_file):
               to_label_size = to_label_size2
     else:
         batch_size = random_sample_size + to_label_size
-    csv_spectra_file_names=""
-    if 'csv_spectra_file_names' in json_dict:
-        csv_spectra_file_names = json_dict['csv_spectra_file_names']
-    elif 'poolnames_csv' in json_dict:
-        csv_spectra_file_names = json_dict['poolnames_csv']
-    if 'csv_spectra_file2' in json_dict:
-        csv_spectra_file2 = json_dict['csv_spectra_file2']
-    else:
-        csv_spectra_file2 = 'csv_spectra_file2.csv'
+    csv_spectra_file2 = folder_prefix + folder + learning_session_name + '/spectra2add_' + str(iteration_num)+'.csv'
     b_read_spectra_from_fits_or_vot_files = 0
     if 'raw_spectra_source' in json_dict:
         raw_spectra_source = json_dict['raw_spectra_source']
     else:
         raw_spectra_source = 1
-    if 'csv_spectra_file' in json_dict:
-        csv_spectra_file = json_dict['csv_spectra_file']
-        if csv_spectra_file_names=="": csv_spectra_file_names=csv_spectra_file
-        processed_df = dh.load_set3(csv_spectra_file_names,csv_spectra_file,to_label_csv,csv_spectra_file2,raw_spectra_source)
-        processed_df.columns = pd.to_numeric(processed_df.columns)
-    elif 'pool_csv' in json_dict:
-        csv_spectra_file = json_dict['pool_csv']
-        if csv_spectra_file_names=="": csv_spectra_file_names=csv_spectra_file
-        processed_df = dh.load_set3(csv_spectra_file_names,csv_spectra_file,to_label_csv,csv_spectra_file2,raw_spectra_source)
+    if 'pool_csv' in json_dict:
+        processed_df = dh.load_set_al(poolnames_csv,pool_csv,to_label_csv,csv_spectra_file2,raw_spectra_source)
         processed_df.columns = pd.to_numeric(processed_df.columns)
     else:
         spectra_list = dh.load_spectra_from_fits('.')
@@ -422,11 +504,8 @@ def run_preprocessing(input_file):
                 metadata_df = dh.load_metadata_set(csv_metadata_file,metadata2import)
             else:
                 metadata_df = dh.load_metadata_set0(csv_metadata_file)
-    with_output=0
-    if 'show_candidates' in json_dict:
-        show_candidates = json_dict['show_candidates']
-        if show_candidates == 'yes':
-            candidates_df = dh.load_set3(csv_spectra_file_names,csv_spectra_file,"candidates.csv","csv_candidates_spectra.csv",raw_spectra_source)
+    if show_candidates == 'yes':
+            candidates_df = dh.load_set_al(poolnames_csv,pool_csv,"candidates.csv","csv_candidates_spectra.csv",raw_spectra_source)
             candidates_df.columns = pd.to_numeric(candidates_df.columns)
             processed_spectra2display = [processed_df,candidates_df]
             processed_df=pd.concat(processed_spectra2display)
@@ -441,25 +520,9 @@ def run_preprocessing(input_file):
         prediction_file="predictions.csv"
     else:
         prediction_file=to_label_csv
-		
-    #next iteration json configuration
-    with open('new_config.json', 'w') as f2:
-        x = json_dict
-        if "iteration_num" in x:
-           x["iteration_num"] = x["iteration_num"] + 1
-        else:
-           x["iteration_num"] = 1
-        x["training_set_addition_csv"] = spectra2add_fname
-        x["spectra2add_fname"] = 'spectra2add_' + learning_session_name + '_' + str(iteration_num+1) + '.csv'
-        x["labels2add_fname"] = 'labels_' + learning_session_name + '_' + str(iteration_num+1) + '.csv'
-        json.dump(x,f2,indent=4)
-    if 'import2elastic' in json_dict:
-        csv2elastic(spectra)
-    else:
-        header = processed_df.columns
-        html_code = _generate_spectra(processed_df,database_index,metadata_df,classes,prediction_file,random_sample_size,oracle_size,cat_list,metadata2show,iteration_num,spectra2add_fname,labels2add_fname,raw_spectra_source,statistics)
-        with open("./index.html", "w") as file:
-            file.write(html_code)
+    html_code = _generate_spectra(folder_prefix,folder,processed_df,database_index,metadata_df,classes,prediction_file,random_sample_size,oracle_size,cat_list,metadata2show,iteration_num,spectra2add_fname,labels2add_fname,raw_spectra_source,statistics,learning_session_name)
+    with open("./index.html", "w") as file:
+        file.write(html_code)
 
 if __name__ == '__main__':
     main()

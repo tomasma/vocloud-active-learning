@@ -7,58 +7,55 @@
     <style type="text/css">
     </style>
     <script type="text/javascript">
-	//var options = null;
-	
-	var downloadStarted = false;
-	var series = [];//processed spectra
-	var series_raw_wavelengths = [];//raw spectra wavelengths
-	var series_raw_data = [];//raw spectra data
-	var metaseries = ${md};//metadata
-	var md_columns=${mdcols};//metadata categories
-	var n_md_cols=md_columns.length;
-	
-	var fname_list = ${fname};
-	var prediction_list = ${prediction};
-	
-	var chart = null;
-	var chartRaw = null;
-	var rawSpectraOn = 0;
-	
-	var label_list =${lab};
-	var label_num_list = [];
-	var i_col_label=md_columns.indexOf("Label");
-	if (i_col_label<0) i_col_label=md_columns.indexOf("label");
-	var comment_list = ${comments};
-	var oracle_perfest_list = ${oracle_perf};
-	var cat_list=${cat};/
-	var n_categories = cat_list.length;
 
-	var n_items=fname_list.length;
-	
-	var big_table_on=0;//all metadata table
-	var big_table_created=0;
+    var folder = '${folder}';
+    var session = '${session}';
+    var iteration = ${itnum};
+    var downloadStarted = false;
+    var series = [];//processed spectra
+    var series_raw_wavelengths = [];//raw spectra wavelengths
+    var series_raw_data = [];//raw spectra data
+    var metaseries = ${md};//metadata
+    var md_columns=${mdcols};//metadata categories
+    //var iteration=0;
+    var n_md_cols=md_columns.length;
+    var fname_list = ${fname};
+    var prediction_list = ${prediction};
+    var chart = null;
+    var chartRaw = null;
+    var rawSpectraOn = 0;
+    var label_list =${lab};
+    var label_num_list = [];
+    var i_col_label=md_columns.indexOf("Label");
+    if (i_col_label<0) i_col_label=md_columns.indexOf("label");
+    var comment_list = ${comments};
+    var oracle_perfest_list = ${oracle_perf};
+    var cat_list=${cat};
+    var n_categories = cat_list.length;
+    var n_items=fname_list.length;
+    var big_table_on=0;//all metadata table
+    var big_table_created=0;
+    var random_sample_size = ${random_sample_size};
+    var oracle_size = ${oracle_size};
+    var performance_estimate_success_rate=0;
+    var div_pe_created=0;//performance estimate display
+    var raw_spectra_source = ${raw_spectra_source};
+    var statistics = ${statistics};//fraction of individual spectral categories
+    var comment_length_limit = 200;
 
-	var random_sample_size = ${random_sample_size};
-	var oracle_size = ${oracle_size};
-	
-	var performance_estimate_success_rate=0;
-	var div_pe_created=0;//performance estimate display
-	var raw_spectra_source = ${raw_spectra_source};
-	var statistics = ${statistics};//fraction of individual spectral categories
-	
-	function startEvaluation() {
-		downloadSpectra();
-		var startEvalBtn = $$('#startEvaluationButton');
+    function startEvaluation() {
+	downloadSpectra();
+	var startEvalBtn = $$('#startEvaluationButton');
             startEvalBtn.html('Evaluating...');
             startEvalBtn.prop('disabled', true); 
-	    $$('#saveButton').prop('disabled', false);
-	}
+        $$('#saveButton').prop('disabled', false);
+    }
     function downloadSpectra() {
-		if (downloadStarted) {
-			return;
-		}
-		downloadStarted = true;   
-		$$.ajax("spectra.txt", {
+	if (downloadStarted) {
+	    return;
+	}
+	downloadStarted = true;   
+	$$.ajax("spectra.txt", {
             success: function (data) {
                 var rows = data.split("\n");
                 for (var row in rows) {
@@ -76,8 +73,8 @@
                 showDownloadSuccess();
             }
           });
-		if (raw_spectra_source>0){
-		$$.ajax("raw_spectra_wavelengths.txt", {
+	if (raw_spectra_source>0){
+	$$.ajax("raw_spectra_wavelengths.txt", {
             success: function (data) {
                 var rows = data.split("\n");
                 for (var row in rows) {
@@ -111,8 +108,8 @@
                 }
             }
           });
-	  };
-	  $$.ajax("metadata.csv", {
+      };
+      $$.ajax("metadata.csv", {
             success: function (metadata) {
                 var rows = metadata.split("\n");
                 for (var row in rows) {
@@ -124,444 +121,426 @@
                     metaseries.push(itemRow);
                 }
             }
-          });
-        };
-
-	function showDownloadSuccess() {
-		keyboardControl();
-		$$('#downloadSpectraButton').html("Evaluation in progress");
-		$$('#reloadSpectraButton').prop('disabled', false);
-		$$("#spectra_list option:selected").prop("selected", false);
-		$$("#spectra_list option:eq(0)").prop("selected", true);
-		var selected = $$('#spectra_list').find(":selected");
-		showSpectra(selected);
-		changeContent(selected);
-	}
-	function range(low, high){
-		var range = [];
-		while(low < high){
-			range.push(low++);
+        });
+    };
+    function showDownloadSuccess() {
+	keyboardControl();
+	$$('#downloadSpectraButton').html("Evaluation in progress");
+	$$('#reloadSpectraButton').prop('disabled', false);
+	$$("#spectra_list option:selected").prop("selected", false);
+	$$("#spectra_list option:eq(0)").prop("selected", true);
+	var selected = $$('#spectra_list').find(":selected");
+	showSpectra(selected);
+	changeContent(selected);
+    }
+    function range(low, high){
+	var range = [];
+	while(low < high){
+	    range.push(low++);
         }
         return range;
-	}
-	function transpose(matrix){
+    }
+function transpose(matrix){
         return matrix[0].map(function(col, i) {
-			return matrix.map(function(row) {
-				return row[i];
-			})
-		});
+	    return matrix.map(function(row) {
+		return row[i];
+	    })
+	});
+    }
+    function showSpectra(selected){
+	var selectedNames = ["length"];
+	var selectedIndex = [];
+	for(var opt in selected.toArray()){
+	    selectedIndex.push(selected[opt].index);
+	    selectedNames.push(selected[opt].text);
 	}
-	function showSpectra(selected){
-		var selectedNames = ["length"];
-		var selectedIndex = [];
-		for(var opt in selected.toArray()){
-			selectedIndex.push(selected[opt].index);
-			selectedNames.push(selected[opt].text);
-		}
-		var chartData = [];
-		first_row = ${cats};
-		chartData.push(first_row);
-		for(var idx in series){
-			var indexInSelected = selectedIndex.indexOf(parseInt(idx));
-			if(indexInSelected != -1){
-				chartData.push(series[idx]);
-				changeRowContent(metaseries[idx]);
-				document.getElementById('comment').value = comment_list[idx];
-			}
-		}
-		chartData = transpose(chartData);
-		if(!chart){
-			chart = new Dygraph(document.getElementById("plot"), chartData,{labels: selectedNames,animatedZooms: true
-			});
-		}
-		else{
-			chart.updateOptions({"file": chartData, "labels": selectedNames });
-		}
-	}
-	function showRawSpectra(selected){
-		var selectedNames = ["length"];
-		var selectedIndex = [];
-		for(var opt in selected.toArray()){
-			selectedIndex.push(selected[opt].index);
-			selectedNames.push(selected[opt].text);
-		}
-		var chartDataRaw = [];
-		var dataPresent=0;
-		first_row = ${cats};
-		for(var idx in series_raw_data){
-			var indexInSelected = selectedIndex.indexOf(parseInt(idx));
-			if(indexInSelected != -1 && dataPresent==0){
-				dataPresent=1;
-				chartDataRaw.push(series_raw_wavelengths[idx]);
-				chartDataRaw.push(series_raw_data[idx]);
-			}
-		}
-		chartDataRaw = transpose(chartDataRaw);
-		if(!chartRaw){
-			chartRaw = new Dygraph(document.getElementById("plot_raw"), chartDataRaw, {
-			labels: selectedNames,
-			animatedZooms: true
-			});
-		}
-		else{
-			chartRaw.updateOptions({"file": chartDataRaw, "labels": selectedNames });
-		}
-	}
-	function reloadSpectra(){
-	    if (downloadStarted==false){
-			downloadSpectra();
-		}
-		var selected = $$('#spectra_list').find(":selected");
-		showSpectra(selected);
-	}
-	function reloadRawSpectra(){
-		var selected = $$('#spectra_list').find(":selected");
-		rawSpectraOn = (rawSpectraOn + 1) % 2
-		if (rawSpectraOn == 1){
-			document.getElementById('plot_raw').style.visibility = "visible";
-			showRawSpectra(selected);
-		}
-		else{
-			document.getElementById('plot_raw').style.visibility = "hidden";
-		}
-	}
-	function goNext(cat){
-		var selected = $$('#spectra_list').find(":selected");
-		changeLabel(selected,cat)
-			$$('#spectra_list option:selected')
-			.prop("selected", false)
-			.next()
-			.prop("selected", true);
-		selected = $$('#spectra_list').find(":selected");
-	    var radios = document.getElementsByName('radio');
-	    for (var i=0;i<radios.length;i++){
-		radios[i].checked=false;
-		}
-		showSpectra(selected);
-		if (raw_spectra_source>0){
-			showRawSpectra(selected);
-		}
-	}
-	function goBack1(cat){
-		var selected = $$('#spectra_list').find(":selected");
-		changeLabel(selected,cat)
-			$$('#spectra_list option:selected')
-			.prop("selected", false)
-			.prev()
-			.prop("selected", true);
-		selected = $$('#spectra_list').find(":selected");
-		showSpectra(selected);
-		if (raw_spectra_source>0){showRawSpectra(selected);};
-		selected.scrollIntoView();
-	}
-	function changeContent(selected){
-		var selectedIndex = [];
-		for(var opt in selected.toArray()){
-			selectedIndex.push(selected[opt].index);
-		}
-	}
-	function changeRowContent(metaRow)
-	{
-	    var x=document.getElementById('metadata1').rows
-	    var y=x[1].cells
-	    for(var i=0; i < n_md_cols;i++){
-		y[i].innerHTML=metaRow[i]
+	var chartData = [];
+	first_row = ${wavelengths};
+	chartData.push(first_row);
+	for(var idx in series){
+	    var indexInSelected = selectedIndex.indexOf(parseInt(idx));
+	    if(indexInSelected != -1){
+		chartData.push(series[idx]);
+		changeRowContent(metaseries[idx]);
+		document.getElementById('comment').value = comment_list[idx];
 	    }
-	};
-	function changeLabel(selected,cat){
-		var idx=selected[0].index;
-		label_list[idx]=cat_list[cat];
-		label_num_list[idx]=cat;
-		metaseries[idx][i_col_label]=cat_list[cat];
-		if (big_table_created==1){
-		document.getElementById("big_table").rows[idx+1].cells[i_col_label].innerHTML=cat_list[cat];
-		}
-	};
-	
-	function keyboardControl(){
-		var radios = document.getElementsByName('radio');	
-		document.addEventListener('keydown', function(event) {
-			if (event.code == 'Numpad1' && event.altKey == true || event.code == 'Digit1' && event.altKey == true){
-			event.preventDefault();radios[0].checked=true;goNext(0); 
-			}
-			if (event.code == 'Numpad2' && event.altKey == true || event.code == 'Digit2' && event.altKey == true){
-			event.preventDefault();radios[1].checked=true;goNext(1);
-			}
-			if (event.code == 'Numpad3' && event.altKey == true || event.code == 'Digit3' && event.altKey == true){
-			event.preventDefault();radios[2].checked=true;goNext(2);
-			}
-			if (event.code == 'Numpad4' && event.altKey == true || event.code == 'Digit4' && event.altKey == true){
-			event.preventDefault();radios[3].checked=true;goNext(3);
-			}
-	    });
-	};
-	function addComment(){
-		var selected = $$('#spectra_list').find(":selected");
-		var idx=selected[0].index;
-		comment_list[idx] = document.getElementById('comment').value;
-		document.getElementById('comment').value="";
-	};	
-	function displayCurrent(){
-		var div1 = document.getElementById('div1');
-		var tbl = document.createElement("table");
-		tbl.setAttribute('id', 'metadata1');
-		tbl.style.float='center'; 
-		tbl.style.align='center';
-		tbl.style.width='100%';
-		tbl.style.marginLeft='auto';
-		tbl.style.marginRight='auto';
-		tbl.style.border='1px solid black'
-		tbl.style.marginBottom='10px'
-
-		var header = document.createElement("tr");
-		for (var c = 0; c < n_md_cols; c++) {
-			var cell = document.createElement("th");
-			var cellText = document.createTextNode(md_columns[c]);
-			cell.appendChild(cellText);
-			if (md_columns[c]=='filename'){
-				cell.style.width='35%';
-			}
-			cell.style.border='1px solid black';
-			header.appendChild(cell);
-		}
-		tbl.appendChild(header); 
-		var row = document.createElement("tr");
-		row.style.height="60px";
-		for (var c = 0; c < n_md_cols; c++){
-			var cell = document.createElement("td");
-			var cellText = document.createTextNode("");
-			cell.style.border='1px solid black';
-			cell.style.textAlign='center';
-			cell.appendChild(cellText);
-			row.appendChild(cell);
-		}
-		tbl.appendChild(row); // add the row to the end of the table body
-		div1.appendChild(tbl); // appends <table> into <div1>
-	};
-	function displayAll() {
-		if (big_table_created==1) {
-			if (big_table_on==1) {
-				hideAll();
-			}
-			else {
-				unhideAll();
-			}
-		}
-	    else {
-			var div3 = document.getElementById('div3');
-			var tbl = document.createElement("table");
-			tbl.setAttribute('id', 'big_table');
-			tbl.style.float='center'; 
-			tbl.style.align='center';
-			tbl.style.marginTop='10px'
-			tbl.style.marginLeft='auto';
-			tbl.style.marginRight='auto';
-			tbl.style.cellpadding= '20px' 
-			tbl.style.border='1px solid black'
-			var header = document.createElement("tr");
-			for (var c = 0; c < n_md_cols; c++) {
-				var cell = document.createElement("th");
-				var cellText = document.createTextNode(md_columns[c]);
-				cell.appendChild(cellText);
-				cell.style.border='1px solid black'
-				header.appendChild(cell);
-			}
-			tbl.appendChild(header);
-			for (var idx = 0; idx < n_items; idx++) {
-				var row = document.createElement("tr");
-				for (var c = 0; c < n_md_cols; c++) {
-					var cell = document.createElement("td");
-					var cellText = document.createTextNode(metaseries[idx][c]);
-					cell.style.border='1px solid black'
-					cell.appendChild(cellText);
-					row.appendChild(cell);
-				}           
-				tbl.appendChild(row);
-			}
-			div3.appendChild(tbl); // appends <table> into <div3>
-			big_table_on=1;
-			big_table_created=1;
-			var displayAllBtn = $$('#displayAllButton');
-			displayAllBtn.html('All metadata');
-		}
 	}
-	function displayAssessment() {
-	    var div2 = document.getElementById('div2');
-	    div2.height = '150px'
+	chartData = transpose(chartData);
+	if(!chart){
+	    chart = new Dygraph(document.getElementById("plot"), chartData,{labels: selectedNames,animatedZooms: true
+	    });
+	}
+	else{
+	    chart.updateOptions({"file": chartData, "labels": selectedNames });
+	}
+    }
+    function showRawSpectra(selected){
+	var selectedNames = ["length"];
+	var selectedIndex = [];
+	for(var opt in selected.toArray()){
+	    selectedIndex.push(selected[opt].index);
+	    selectedNames.push(selected[opt].text);
+	}
+	var chartDataRaw = [];
+	var dataPresent=0;
+	first_row = ${wavelengths};
+	for(var idx in series_raw_data){
+	    var indexInSelected = selectedIndex.indexOf(parseInt(idx));
+	    if(indexInSelected != -1 && dataPresent==0){
+		dataPresent=1;
+		chartDataRaw.push(series_raw_wavelengths[idx]);
+		chartDataRaw.push(series_raw_data[idx]);
+	    }
+	}
+	chartDataRaw = transpose(chartDataRaw);
+	if(!chartRaw){
+	    chartRaw = new Dygraph(document.getElementById("plot_raw"), chartDataRaw, {
+	    labels: selectedNames,
+	    animatedZooms: true
+	    });
+	}
+	else{
+	    chartRaw.updateOptions({"file": chartDataRaw, "labels": selectedNames });
+	}
+    }
+    function reloadSpectra(){
+        if (downloadStarted==false){
+	    downloadSpectra();
+	}
+	var selected = $$('#spectra_list').find(":selected");
+	showSpectra(selected);
+    }
+    function reloadRawSpectra(){
+	var selected = $$('#spectra_list').find(":selected");
+	rawSpectraOn = (rawSpectraOn + 1) % 2
+	if (rawSpectraOn == 1){
+	    document.getElementById('plot_raw').style.visibility = "visible";
+	    showRawSpectra(selected);
+	}
+	else{
+	    document.getElementById('plot_raw').style.visibility = "hidden";
+	}
+    }
+
+    function goNext(cat){
+	var selected = $$('#spectra_list').find(":selected");
+	changeLabel(selected,cat)
+	    $$('#spectra_list option:selected')
+	    .prop("selected", false)
+	    .next()
+	    .prop("selected", true);
+	selected = $$('#spectra_list').find(":selected");
+	if (selected.length){
+    	    var radios = document.getElementsByName('radio');
+    	    for (var i=0;i<radios.length;i++){
+		radios[i].checked=false;
+	    }
+	    showSpectra(selected);
+	    if (raw_spectra_source>0){
+		showRawSpectra(selected);
+	    }
+	}
+	else{
+	    save();
+	}
+    }
+    function goBack1(cat){
+	var selected = $$('#spectra_list').find(":selected");
+	changeLabel(selected,cat)
+	    $$('#spectra_list option:selected')
+	    .prop("selected", false)
+	    .prev()
+	    .prop("selected", true);
+	selected = $$('#spectra_list').find(":selected");
+	showSpectra(selected);
+	if (raw_spectra_source>0){showRawSpectra(selected);};
+	selected.scrollIntoView();
+    }
+    function changeContent(selected){
+	var selectedIndex = [];
+	for(var opt in selected.toArray()){
+	    selectedIndex.push(selected[opt].index);
+	}
+    }
+    function changeRowContent(metaRow)
+    {
+        var x=document.getElementById('metadata1').rows
+        var y=x[1].cells
+        for(var i=0; i < n_md_cols;i++){
+	y[i].innerHTML=metaRow[i]
+        }
+    };
+    function changeLabel(selected,cat){
+	var idx=selected[0].index;
+	label_list[idx]=cat_list[cat];
+	label_num_list[idx]=cat;
+	metaseries[idx][i_col_label]=cat_list[cat];
+	if (big_table_created==1){
+	document.getElementById("big_table").rows[idx+1].cells[i_col_label].innerHTML=cat_list[cat];
+	}
+    };
+    function keyboardControl(){
+	var radios = document.getElementsByName('radio');	
+	document.addEventListener('keydown', function(event) {
+	    if (event.code == 'Numpad1' && event.altKey == true || event.code == 'Digit1' && event.altKey == true){
+	    event.preventDefault();radios[0].checked=true;goNext(0); 
+	    }
+	    if (event.code == 'Numpad2' && event.altKey == true || event.code == 'Digit2' && event.altKey == true){
+	    event.preventDefault();radios[1].checked=true;goNext(1);
+	    }
+	    if (event.code == 'Numpad3' && event.altKey == true || event.code == 'Digit3' && event.altKey == true){
+	    event.preventDefault();radios[2].checked=true;goNext(2);
+	    }
+	    if (event.code == 'Numpad4' && event.altKey == true || event.code == 'Digit4' && event.altKey == true){
+	    event.preventDefault();radios[3].checked=true;goNext(3);
+	    }
+	    if (event.code == 'Numpad5' && event.altKey == true || event.code == 'Digit5' && event.altKey == true){
+    	    event.preventDefault();radios[4].checked=true;goNext(4);
+    	    }
+	    if (event.code == 'KeyP' && event.altKey == true){
+    	    goBack1();
+    	    }
+        });
+    };
+    function addComment(){
+	var selected = $$('#spectra_list').find(":selected");
+	var idx=selected[0].index;
+	comment_list[idx] = (document.getElementById('comment').value).substring(0,comment_length_limit);
+	document.getElementById('comment').value="";
+    };	
+    function displayCurrent(){
+	var div1 = document.getElementById('div1');
+	var tbl = document.createElement("table");
+	tbl.setAttribute('id', 'metadata1');
+	tbl.style.float='center'; 
+	tbl.style.align='center';
+	tbl.style.width='100%';
+	tbl.style.marginLeft='auto';
+	tbl.style.marginRight='auto';
+	tbl.style.border='1px solid black'
+	tbl.style.marginBottom='10px'
+
+	var header = document.createElement("tr");
+	for (var c = 0; c < n_md_cols; c++) {
+	    var cell = document.createElement("th");
+	    var cellText = document.createTextNode(md_columns[c]);
+	    cell.appendChild(cellText);
+	    if (md_columns[c]=='filename'){
+		cell.style.width='35%';
+	    }
+	    cell.style.border='1px solid black';
+	    header.appendChild(cell);
+	}
+	tbl.appendChild(header); 
+	var row = document.createElement("tr");
+	row.style.height="60px";
+	for (var c = 0; c < n_md_cols; c++){
+	    var cell = document.createElement("td");
+	    var cellText = document.createTextNode("");
+	    cell.style.border='1px solid black';
+	    cell.style.textAlign='center';
+	    cell.appendChild(cellText);
+	    row.appendChild(cell);
+	}
+	tbl.appendChild(row); // add the row to the end of the table body
+	div1.appendChild(tbl); // appends <table> into <div1>
+    };
+    function displayAll() {
+	if (big_table_created==1) {
+	    if (big_table_on==1) {
+		hideAll();
+	    }
+	    else {
+		unhideAll();
+	    }
+	}
+        else {
+	    var div3 = document.getElementById('div3');
 	    var tbl = document.createElement("table");
-    	    tbl.setAttribute('id', 'table_assessment');
-    	    tbl.style.float='center'; 
-    	    tbl.style.align='center';
-    	    tbl.style.marginTop='20px'
+	    tbl.setAttribute('id', 'big_table');
+	    tbl.style.float='center'; 
+	    tbl.style.align='center';
+	    tbl.style.marginTop='10px'
 	    tbl.style.marginLeft='auto';
-    	    tbl.style.marginRight='auto';
-    	    tbl.style.cellpadding= '20px';
-	    tbl.style.height='106px';
-	    var radioInput=[];
-	    for (var c = 0; c < n_categories; c++) {
+	    tbl.style.marginRight='auto';
+	    tbl.style.cellpadding= '20px' 
+	    tbl.style.border='1px solid black'
+	    var header = document.createElement("tr");
+	    for (var c = 0; c < n_md_cols; c++) {
+		var cell = document.createElement("th");
+		var cellText = document.createTextNode(md_columns[c]);
+		cell.appendChild(cellText);
+		cell.style.border='1px solid black'
+		header.appendChild(cell);
+	    }
+	    tbl.appendChild(header);
+	    for (var idx = 0; idx < n_items; idx++) {
 		var row = document.createElement("tr");
-		var cell = document.createElement("td");
-		var label = document.createElement('label');
-		radioInput[c] = document.createElement('input');
-		radioInput[c].setAttribute('type', 'radio');
-		radioInput[c].setAttribute('name', 'radio');
-		radioInput[c].setAttribute('id', 'radio'+c);
-		radioInput[c].setAttribute('onclick', 'goNext('+c+')');
-		label.appendChild(radioInput[c]);
-		var d=c+1;
-		var labeltext = document.createTextNode(' '+d+'\u0332'+'-'+cat_list[c]);
-		//var labeltext = document.createTextNode(cat_list[c]);
-		label.appendChild(labeltext);
-		cell.appendChild(label);
-		row.appendChild(cell);
-		if (c==1) {
-		    var td1 = document.createElement("td");
-		    textInput = document.createElement('input');
-		    textInput.setAttribute('type', 'text');
-		    textInput.setAttribute('id', 'comment');
-		    textInput.style.marginLeft = '40px'
-		    textInput.style.marginRight = '15px'
-		    textInput.size = '10';
-		    td1.appendChild(textInput);
-		    //td1.style.width='5%';
-		    row.appendChild(td1);
-		    var td2 = document.createElement("td");
-		    commentButton = document.createElement('input');
-		    commentButton.setAttribute('id', 'commentButton');
-		    commentButton.setAttribute('type', 'button');
-		    commentButton.setAttribute('value', 'Submit comment');
-		    commentButton.setAttribute('onclick', 'addComment()');
-		    td2.appendChild(commentButton);
-		    row.appendChild(td2);
-		}
+		for (var c = 0; c < n_md_cols; c++) {
+		    var cell = document.createElement("td");
+		    var cellText = document.createTextNode(metaseries[idx][c]);
+		    cell.style.border='1px solid black'
+		    cell.appendChild(cellText);
+		    row.appendChild(cell);
+		}           
 		tbl.appendChild(row);
 	    }
-	    div2.appendChild(tbl);
-	}
-	function initializeDisplay() {
-	    displayCurrent();
-	    reloadSpectra();
-	    displayAssessment();
-	}
-	function showSelected() {
-    	    reloadSpectra();
-	    var selected = $$('#spectra_list').find(":selected");
-	    if (raw_spectra_source>0){showRawSpectra(selected);};
-	}
-	function hideAll() {
-	    document.getElementById('div3').style.visibility = "hidden";
-	    var displayAllBtn = $$('#displayAllButton');
-            displayAllBtn.html('All metadata');
-	    big_table_on=0;
-        }
-	function unhideAll() {
-	    document.getElementById('div3').style.visibility = "visible";
-	    var displayAllBtn = $$('#displayAllButton');
-            displayAllBtn.html('All metadata');
+	    div3.appendChild(tbl); // appends <table> into <div3>
 	    big_table_on=1;
+	    big_table_created=1;
+	    var displayAllBtn = $$('#displayAllButton');
+	    displayAllBtn.html('All metadata');
 	}
-	function computePerformanceEstimate() {
-	    n_in_agreement=0;
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files/upload",dataType:"text",data: "test",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/jupyter/token",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/jupyter/token",token:"x",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'GET',url: "/vocloud-betelgeuse/api/files2/upload",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files1/upload",contentType:"text/plain",data:'', success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-
-
-	    for (var i=oracle_size+1;i<oracle_size+random_sample_size;i++){
-		if (label_list[i]==prediction_list[i] && label_list[i]!=""){
-		    n_in_agreement++;
-		};
+    }
+    function displayAssessment() {
+	var div2 = document.getElementById('div2');
+	div2.height = '150px'
+	var tbl = document.createElement("table");
+	tbl.setAttribute('id', 'table_assessment');
+	tbl.style.float='center'; 
+	tbl.style.align='center';
+	tbl.style.marginTop='20px'
+	tbl.style.marginLeft='auto';
+	tbl.style.marginRight='auto';
+	tbl.style.cellpadding= '20px';
+	tbl.style.height='106px';
+	var radioInput=[];
+	for (var c = 0; c < n_categories; c++) {
+	    var row = document.createElement("tr");
+	    var cell = document.createElement("td");
+	    var label = document.createElement('label');
+	    radioInput[c] = document.createElement('input');
+	    radioInput[c].setAttribute('type', 'radio');
+	    radioInput[c].setAttribute('name', 'radio');
+	    radioInput[c].setAttribute('id', 'radio'+c);
+	    radioInput[c].setAttribute('onclick', 'goNext('+c+')');
+	    label.appendChild(radioInput[c]);
+	    var d=c+1;
+	    var labeltext = document.createTextNode(' '+d+'\u0332'+'-'+cat_list[c]);
+	    label.appendChild(labeltext);
+	    cell.appendChild(label);
+	    row.appendChild(cell);
+	    if (c==1) {
+		var td1 = document.createElement("td");
+		textInput = document.createElement('input');
+		textInput.setAttribute('type', 'text');
+		textInput.setAttribute('id', 'comment');
+		textInput.style.marginLeft = '40px'
+		textInput.style.marginRight = '15px'
+		textInput.size = '10';
+		td1.appendChild(textInput);
+		row.appendChild(td1);
+		var td2 = document.createElement("td");
+		commentButton = document.createElement('input');
+		commentButton.setAttribute('id', 'commentButton');
+		commentButton.setAttribute('type', 'button');
+		commentButton.setAttribute('value', 'Submit comment');
+		commentButton.setAttribute('onclick', 'addComment()');
+		td2.appendChild(commentButton);
+		row.appendChild(td2);
 	    }
-	    performance_estimate_success_rate=100*n_in_agreement/random_sample_size;
-	    if (div_pe_created==1){
-		text_perfest = 'Performance estimate: '+performance_estimate_success_rate+'%.. ';
-		    for (var i=0;i<10;i++){
-			//text_perfest=text_perfest+i.toString();
-			if (statistics[i]>0){
-			    text_perfest=text_perfest+statistics[i].toString()+' '+cat_list[i]+'; ';
-			}
-		    }			
-		//var cellText = document.createTextNode(text_perfest);
-		//para.appendChild(cellText);
-		//div_pe.appendChild(para);
-		document.getElementById("pe").innerHTML=text_perfest;
-	    }
-	    else{
-		var div_pe=document.getElementById('div_pe');
-		var para = document.createElement("P");
-		para.setAttribute("align", "right");
-		text_perfest = 'Performance estimate: '+performance_estimate_success_rate+'%. ';
-		for (var i=0;i<10;i++){
-		    //text_perfest=text_perfest+i.toString();
-		    if (statistics[i]>0){
-		        text_perfest=text_perfest+statistics[i].toString()+' '+cat_list[i]+'; ';
-		    }
-		}			
-		//var cellText = document.createTextNode('Performance estimate: '+performance_estimate_success_rate+'%');
-		var cellText = document.createTextNode(text_perfest);
-		cellText.id = "pe";
-		para.appendChild(cellText);
-		div_pe.appendChild(para);
-		div_pe.style.margin = '0';
-	        div_pe_created=1;
-	    }
+	    tbl.appendChild(row);
 	}
-	function save()
-	{
-	    function makeTextFile (text)
-	    {
-	        var textFile = null;
-	        var data = new Blob([text], {type: 'text/plain'});
-	        if (textFile !== null) {
-	            window.URL.revokeObjectURL(textFile);
-	        }
-	        textFile = window.URL.createObjectURL(data);
-	        return textFile;
+	div2.appendChild(tbl);
+    }
+    function initializeDisplay() {
+	displayCurrent();
+	reloadSpectra();
+	displayAssessment();
+    }
+    function showSelected() {
+	reloadSpectra();
+	var selected = $$('#spectra_list').find(":selected");
+	if (raw_spectra_source>0){showRawSpectra(selected);};
+    }
+    function hideAll() {
+	document.getElementById('div3').style.visibility = "hidden";
+	var displayAllBtn = $$('#displayAllButton');
+	displayAllBtn.html('All metadata');
+	big_table_on=0;
+    }
+    function unhideAll() {
+	document.getElementById('div3').style.visibility = "visible";
+	var displayAllBtn = $$('#displayAllButton');
+	displayAllBtn.html('All metadata');
+	big_table_on=1;
+    }
+    function computePerformanceEstimate() {
+	var n_in_agreement=0;
+	var n_labelled=0;
+	for (var i=oracle_size;i<oracle_size+random_sample_size;i++){
+    	    if (label_list[i]!=""){
+		if (label_list[i]==prediction_list[i]) {n_in_agreement++;}
+		n_labelled++;
 	    };
-	    var link1 = document.getElementById('downloadlink1');
-	    var link2 = document.getElementById('downloadlink2');
-	    var labels='';
-	    var spectra2save='id,label,'+${cats}+'\n';
-	    for (var idx in label_list)
-            {
-                labels=labels+fname_list[idx]+','+label_num_list[idx]+','+comment_list[idx]+',\n';
-		if (oracle_perfest_list[idx]=='oracle'){
-	    	    spectra2save=spectra2save+fname_list[idx]+','+label_num_list[idx]+','+series[idx]+'\n';
+	};
+	if (n_labelled>0) performance_estimate_success_rate=100*n_in_agreement/n_labelled;
+	if (div_pe_created==1){
+	    text_perfest = 'Performance estimate: '+performance_estimate_success_rate+'%. ';
+	    var div_pe=document.getElementById('div_pe');
+    	    var para = document.createElement("P");
+	    para.setAttribute("align", "right");
+	    var cellText = document.createTextNode(text_perfest);
+	    para.appendChild(cellText);
+	    div_pe.appendChild(para);
+	    div_pe.style.margin = '0';
+	}
+	else{
+	    var div_pe=document.getElementById('div_pe');
+	    var para = document.createElement("P");
+	    para.setAttribute("align", "right");
+	    text_perfest = ' Performance estimate: '+performance_estimate_success_rate+'%. '+' Labelled: '+n_labelled.toString()+', correctly: '+n_in_agreement.toString()+', ';
+	    for (var i=0;i<10;i++){
+		if (statistics[i]>0){
+		    text_perfest=text_perfest+statistics[i].toString()+' '+cat_list[i]+'; ';
 		}
-            };
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files1/upload",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //var testjson=stringify(labels);
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType:"text", charset=utf-8",data: labels});
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType:"text",data: labels});
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType: "text",data: "test"});
-	    //ok: $$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType: "text",data: "test",success: function(labels){console.log(labels);}});
-	    
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files/upload",dataType:"text",data: "test",success: function(returnOK){displayAll();}});
-	    //$$.ajax({type: 'POST',url: "new_labels.csv",dataType: "text",data: "test",success: function(labels){console.log(labels);}});
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType:"text", charset="utf-8",data: labels});
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType:"text", charset=utf-8",data: labels});
-	    link1.href = makeTextFile(labels);
-	    link2.href = makeTextFile(spectra2save);
-	    link1.style.display = 'block';
-	    link2.style.display = 'block';
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files21/upload",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/job/iterate",contentType:"text/plain",configurationJson: '',success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files80/upload?path=/var/local/vocloud/filesystem/DATA/active-cnn3/testx.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    $$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files81/upload?folder=/filesystem/DATA/active-cnn3/&filename=testx.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files52/upload?path=/vocloud-betelgeuse/filesystem/DATA/active-cnn3/testx.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files52/upload?path=/vocloud-betelgeuse/filesystem/DATA/active-cnn3/test0.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files60/upload?path=/vocloud-betelgeuse/filesystem/DATA/active-cnn3/testx.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files60/upload?path=vocloud://DATA/active-cnn3/testx.csv",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files49/upload",contentType:"text/plain",data: labels,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/files1/upload",contentType:"text/plain",data: link1.href,success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});
-	    //$$.ajax({type: 'POST',url: "vocloud://DATA/active-cnn3/new_labels.csv",dataType:"json",contentType: "application/json; charset=utf-8",data: stringify(labels)});
-	    //$$.ajax({type: 'POST',url: "new_labels.csv",dataType:"json",contentType: "application/json; charset=utf-8",data: stringify(labels)});
-        };
-	window.onload=initializeDisplay;
+	    }
+	    var cellText = document.createTextNode(text_perfest);
+	    cellText.id = "pe";
+	    para.appendChild(cellText);
+	    div_pe.appendChild(para);
+	    div_pe.style.margin = '0';
+	    div_pe_created=1;
+	}
+    }
+    function save(){
+	function makeTextFile (text){
+	    var textFile = null;
+	    var data = new Blob([text], {type: 'text/plain'});
+	    if (textFile !== null) {
+		window.URL.revokeObjectURL(textFile);
+	    }
+	    textFile = window.URL.createObjectURL(data);
+	    return textFile;
+	};
+	computePerformanceEstimate();
+	var link1 = document.getElementById('downloadlink1');
+	var link2 = document.getElementById('downloadlink2');
+	var labels='';
+	var labels2='';
+	var spectra2save='id,label,'+${wavelengths}+'\n';
+	var i=0;
+	for (var idx in label_list){
+	    if (i < random_sample_size + oracle_size){
+		if (label_num_list[idx]==null) label_num_list[idx]='';
+		if (comment_list[idx]=='undefined') comment_list[idx]='';
+		labels=labels+fname_list[idx]+','+label_num_list[idx]+','+comment_list[idx]+',\n';
+		labels2=labels2+label_num_list[idx]+','+comment_list[idx]+',\r\n%0D%0A';
+		if (oracle_perfest_list[idx]=='oracle'){
+		    spectra2save=spectra2save+fname_list[idx]+','+label_num_list[idx]+','+series[idx]+'\n';
+		}
+		i=i+1;
+	    }
+	};
+	labels2=labels2+performance_estimate_success_rate;
+	link1.href = makeTextFile(labels);
+	link2.href = makeTextFile(spectra2save);
+	link1.style.display = 'block';
+	link2.style.display = 'block';
+	try{$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/labelData/upload?path="+folder+session+"/labels_"+iteration+".csv&data="+labels2,contentType:"text/plain",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});}
+	catch{$$.ajax({type: 'POST',url: "/vocloud-betelgeuse/api/labelData/upload?path=active-cnn3/labels_"+iteration+".csv&data="+labels2,contentType:"text/plain",success: function(returnOK){displayAll();},error: function(returnNotOK){hideAll();}});}
+    };
+    window.onload=initializeDisplay;
     </script>
   </head>
 <body>

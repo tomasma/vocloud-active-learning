@@ -19,7 +19,7 @@ The most important are:
 The New Active learning job window should appear where you:
 - fill in the Project label (any name)
 - in the job configuration JSON subwindow select Use precreated configuration
-- select active_learning_iteration0.json
+- select `active_learning_iteration0.json`
 
 In the JSON configuration preview panel below a configuration suited for starting a new project (i.e. a configuration allowing you to build your initial training set) should appear. The individual configuration items are:
 - run_active_learning: set it to "yes" if you wish to use active learning (neural network), if omitted or set tootherwise, :labeling only" is started, this setting will eventually be omitted when the "Labeling" worker gets set

@@ -10,6 +10,8 @@ The most important are:
   
 # How to use it?
 
+[Starting a new project](./documentation/starting_a_new_project.md)
+
 # Starting a new project
 
 - go to https://vocloud-dev.asu.cas.cz/

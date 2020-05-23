@@ -10,8 +10,9 @@ The most important are:
   
 # How to use it?
 
-[Starting a new project](./documentation/Starting_a_new_project.md)
+[Start a new project](./documentation/Starting_a_new_project.md)
 
-[Starting a new project with a training set](./documentation/Starting_a_new_project_with_a_training_set.md)
+[Start a new project with a training set](./documentation/Starting_a_new_project_with_a_training_set.md)
 
+[Continue learning](./documentation/Continue_learning.md)
 

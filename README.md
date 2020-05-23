@@ -22,6 +22,4 @@ Continue with the iterative active learning process:
 
 [Continue learning](./documentation/Continue_learning.md)
 
-If you want to see the results:
-
 [See the results](./documentation/See_the_results.md)

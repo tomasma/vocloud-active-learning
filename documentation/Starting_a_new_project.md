@@ -18,7 +18,7 @@ In the JSON configuration preview panel below, a configuration suited for starti
 - `pool_csv`: points to the file containing the spectra to be analyzed, in this example set to a csv file containing the LAMOST-DR2 collection of approximately 4 mil. spectra, incorrect path results in an error   
 - `poolnames_csv`: points to the file containing the names of the spectra to be analyzed, in this example set to a csv file containing the LAMOST-DR2 collection of approximately 4 mil. spectra, incorrect path results in an error 
 - `random_sample_size`: set it to 0 if you are starting a new project (iteration 0), for higher iterations, the recommended setting is 30 (number of random samples used to determine network performance)
-- `batch_size`: set it in the range of 100-500 if you are starting a new project (iteration 0, note: the initial training set has to contain at least 6 examples of each class, high numbers make the labeling session tedious), for higher iterations, the value of 100 is recommended (number of spectra with the highest uncertainty level that the user should label - will be added to the training set in the next iteration)
+- `batch_size`: set it in the range of 100-1000 if you are starting a new project (iteration 0, note: the initial training set has to contain at least 6 examples of each class, high numbers make the labeling session tedious), for higher iterations, the value of 100 is recommended (number of spectra with the highest uncertainty level that the user should label - will be added to the training set in the next iteration)
 
 You most probably just need to set:
 - `learning_session_name`

@@ -14,9 +14,14 @@ In case you do not have an already prepared a training set, use the following pr
 
 [Start a new project](./documentation/Starting_a_new_project.md)
 
-In case you have already prepared a training set (e.g. labelled spectra from Ondřejov dataset), you should the following procedure instead:
+In case you have already prepared a training set (e.g. labelled spectra from Ondřejov dataset), you should use the following procedure instead:
 
 [Start a new project with a training set](./documentation/Starting_a_new_project_with_a_training_set.md)
 
+Continue with the iterative active learning process: 
+
 [Continue learning](./documentation/Continue_learning.md)
 
+If you want to see the results:
+
+[See the results](./documentation/See_the_results.md)

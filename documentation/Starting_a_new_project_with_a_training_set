@@ -1,4 +1,6 @@
-# Starting a new project
+# Starting a new project with a training set
+
+Use this procedure when you wish to start a new project and you have a preprepared training set (e.g. a training set consisting of labelled spectra from Ondřejov collection).
 
 - go to https://vocloud-dev.asu.cas.cz/
 - select `Create job` from the main menu

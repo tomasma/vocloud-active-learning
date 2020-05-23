@@ -10,7 +10,11 @@ The most important are:
   
 # How to use it?
 
+In case you do not have an already prepared a training set, use the following protocol: 
+
 [Start a new project](./documentation/Starting_a_new_project.md)
+
+In case you have already prepared a training set (e.g. labelled spectra from Ondřejov dataset), you should the following procedure instead:
 
 [Start a new project with a training set](./documentation/Starting_a_new_project_with_a_training_set.md)
 

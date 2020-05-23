@@ -10,7 +10,7 @@ The most important are:
   
 # How to use it?
 
-[Starting a new project](./documentation/starting_a_new_project.md)
+[Starting a new project](./documentation/Starting_a_new_project.md)
 
 # Starting a new project
 

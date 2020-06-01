@@ -11,3 +11,8 @@ Now, your task is to label these spectra, i.e. to select the category they belon
 Typically, you will mainly decide based on the shape of the spectra in your wavelength range of interest (default: cca 652-673 nm). Occasionally, you might want to see the whole spectrum (press the Raw spectra button). 
 
 Also, the metadata corresponding to the displayed sample are shown. The types of data that will be displayed might be changed by setting the "metadata2show" option in the job JSON configuration (this has to be set when you start a job). The default is set to "["filename","class","subclass","mag1","ra","dec","prediction","label","iteration","set"]".
+
+You may also view metadata of all the samples. Simply press the "All metadata" button. Pressing the same button again will hide the table.
+
+When you reach the end of the list, all the labels are automatically saved in the DATA/active-learning/your_project folder together with the performance estimation statistics. The statistics is also displayed in the top right corner of the display window. You may also download the labels and, optionally, also the spectra to your computer (hyperlinks labeled "Download labels" and "Download spectra").
+

@@ -1,0 +1,6 @@
+When an active learning job is completed (i.e. when on https://vocloud-dev.asu.cas.cz/vocloud-betelgeuse/jobs/index.xhtml the background color of your job turns green), go to the job Details.
+There, you will see the spectra that, in general belong to 3 categories:
+- "oracle" set (white background color in the list): spectra that the convolutional neural network selected for expert evaluation because in case of these samples 
+the network prediction had the highest level of uncertainty
+- "perf-est" set (green background color in the list): spectra that were randomly selected for the purpose of estimating the network performance.
+- "candidates" (yellow background color in the list): spectra that the network selected as potentially interesting, i.e. belonging to the categories/classes of interest ("candidate classes").

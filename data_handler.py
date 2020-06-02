@@ -64,6 +64,7 @@ def load_set_al(csv_spectra_file_names,csv_spectra_file,oracle_csv,csv_spectra_f
                 print (e)
         idx=csfn.index[csfn['id'] == b].tolist()
         if len(idx)>0:
+            #print (linecache.getline(csv_spectra_file,idx[0]+2),file=f2)
             f2.write(linecache.getline(csv_spectra_file,idx[0]+2))
         b=f.readline()
         i=i+1
@@ -75,7 +76,7 @@ def load_set_al(csv_spectra_file_names,csv_spectra_file,oracle_csv,csv_spectra_f
                        sep=None, dtype=None, na_values='?',
                        skipinitialspace=True, index_col='id',engine='python')
 
-def prepare_spectra2add(csv_spectra_file2add,labels2add,training_set_addition_csv,oracle_size):
+def prepare_spectra2add(csv_spectra_file2add,labels2add,training_set_addition_csv,oracle_size,labels2add_numlines):
     pe=""
     f1=open(csv_spectra_file2add,'r')
     f2=open(labels2add,'r')
@@ -85,20 +86,23 @@ def prepare_spectra2add(csv_spectra_file2add,labels2add,training_set_addition_cs
     f3.write("id,label,"+b_array[1])
     b=f1.readline()
     i=0
-    while (b or c) and i<oracle_size:
-           c=f2.readline()
-           c_array=c.split(',')
-           c1=c_array[0]
+    while b or c: 
+       c=f2.readline()
+       c_array=c.split(',')
+       c1=c_array[0]
+       if i<oracle_size:
            if len(c_array)>1:
               if len(c1)>0:
                   b_array=b.split(',',1)
                   b1=b_array[0]
                   b2=b_array[1]
                   f3.write(b1+","+c1+","+b2)
-           elif len(c1)>0:
+       #elif len(c1)>0 and len(c_array)<2:
+       if i==labels2add_numlines-1:
                   pe = c1
-           b=f1.readline()
-           i=i+1
+                  #print('pe00='+pe+',oracle_size='+str(oracle_size)+',i='+str(i)+',c='+c)
+       b=f1.readline()
+       i=i+1
     f1.close()
     f2.close()
     f3.close()
@@ -190,10 +194,13 @@ def _parse_all_fits(uri):
     es=Elasticsearch([{'host':'localhost','port':9200}])
     metadata = open('metadata.csv', 'a+')
     print('id,ra,dec',file=metadata)
+    #metadata_vot = open('metadata.xml', 'a+')
     for root, dirs, files in os.walk(uri):
+        #print(uri)
         fits_files = [file for file in files if file.endswith('.fits')]
         if len(fits_files) == 0: continue
         for fits_file in fits_files:
+            #print(fits_file)
             try:
                 fits = {}
                 fits["data"] = _parse_fits(os.path.join(root, fits_file))
@@ -212,32 +219,40 @@ def _parse_all_fits(uri):
                     _parse_fits_metadata(os.path.join(root, fits_file),metadata)
                     parsed_fits.append(fits)
                 except Exception as e: print(str(e) + "for :" + str(fits_file))
+    #pprint.pprint(parsed_fits)
 
     return parsed_fits
 
 
 def _parse_fits(uri):
     fits = pyfits.open(uri, memmap=False)
+    #print(fits.info())
     if len(fits) > 1:
         dat = fits[1].data
+        #print(dat)
     else:
+        #print(fits[0].data[0])
         dat=[]
         dat = fits[0].data[0]
+        #dat[1] = fits[0].data[0]
     fits.close()
     return dat.tolist()
 
 def _parse_fits1(uri):
+    #print(uri)
     fits = {}
     try:
         identifier, wave, flux = lamost.read_spectrum(uri)
     except:
         identifier, wave, flux = ondrejov.read_spectrum(uri)
     try:
+        #print(identifier)
         fits["id"] = identifier
         fits["data"] = flux
         fits["header"] = wave
         return fits
     except Exception as e: 
+        #print(str(e) + "for :" + uri)
         fits["id"] = []
         fits["data"] = []
         fits["header"] = []
@@ -247,9 +262,15 @@ def _parse_fits_metadata(uri,metadata):
     fits = pyfits.open(uri, memmap=False)
     if len(fits)>1:
         header = fits[1].header
+        #doc = {'ra':header['RA'],'dec':header['DEC'], 'filename':header['TITLE']}
         print(header['TITLE'],header['RA'],header['DEC'], sep=',', file= metadata)
     else:
         header = fits[0].header
+        #doc = {'ra': header['RA'],'dec': header['DEC'],'filename': header['FILENAME']}
         print(header['FILENAME'],header['RA'],header['DEC'], sep=',', file= metadata)
     fits.close()
+    #if 'folder' in json_dict:
+        #folder = json_dict['folder'
+    #es.index(index='adass', doc_type='doc', id=header['TITLE'], body=doc)
+    #print(header, file = metadata)
     return header

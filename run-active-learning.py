@@ -303,11 +303,21 @@ def label_random_samples(json_dict):
     rand_csv = 'rand.csv'
     return rand_csv
 
+def find_highest_training_set_number(training_set_csv1):
+    iteration_num_highest=0
+    training_set_csv_name_test=training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num_highest)+'.csv'
+    while os.path.exists(training_set_csv_name_test):
+       iteration_num_highest=iteration_num_highest+1
+       training_set_csv_name_test=training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num_highest)+'.csv'
+    return iteration_num_highest
+
 def run_active_learning(json_config_file):
     json_dict = None
     with open(json_config_file, 'r') as f:
         json_dict = json.load(f)
     folder_prefix = '/data/vocloud/filesystem/DATA/'
+    min_random_sample_size = 3
+    min_batch_size = 10
     classes = []
     statistics = []
     statistics_all = []
@@ -343,19 +353,27 @@ def run_active_learning(json_config_file):
     if 'classes' in json_dict:
          classes=json_dict['classes']
     if 'random_sample_size' in json_dict:
-        random_sample_size = int(json_dict['random_sample_size'])
+        try:
+           random_sample_size = int(json_dict['random_sample_size'])
+        except:
+           random_sample_size = min_random_sample_size
+           print('Incorrect random sample size. Switching to default minimum size of ' + str(min_random_sample_size) + '.')
     else:
-        random_sample_size = 3
-	if random_sample_size < 3:
-		random_sample_size = 3
-		print('Random sample size adjusted to minimum = 3.')
+        random_sample_size = min_random_sample_size
+    if random_sample_size < min_random_sample_size:
+        random_sample_size = min_random_sample_size
+        print('Random sample size adjusted to minimum = ' + str(min_random_sample_size) + '3.')
     if 'batch_size' in json_dict:
-        batch_size = int(json_dict['batch_size'])
+        try:
+           batch_size = int(json_dict['batch_size'])
+        except:
+           batch_size = min_batch_size
+           print('Incorrect batch size. Switching to default minimum size of ' + str(min_batch_size) + '.')
     else:
-        batch_size = 10
-	if batch_size < 10:
-		batch_size = 10
-		print('Batch size adjusted to minimum = 10.')	
+        batch_size = min_batch_size
+    if batch_size < min_batch_size:
+        batch_size = min_batch_size
+        print('Batch size adjusted to minimum = '+str(min_batch_size)+'.')
     if 'normalize' in json_dict:
         normalize = json_dict['normalize']
     if 'binning' in json_dict:
@@ -389,11 +407,24 @@ def run_active_learning(json_config_file):
                   os.system(cmd)
     if iteration_num > 0:
        training_set_csv_old = training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num-1)+'.csv'
+       if not(os.path.exists(training_set_csv_old)):
+          try:
+             iteration_num = find_highest_training_set_number(training_set_csv1)
+             print("Training set does not exist. Switching to iteration "+str(iteration_num)+".")
+             training_set_csv_old = training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num-1)+'.csv'
+          except:
+             iteration_num = 0
+             print("Training set does not exist. Switching to iteration 0.")
+    spectra2add_fname = 'spectra2add_' + learning_session_name + '_' + str(iteration_num) + '.csv' 
+    labels2add_fname = 'labels_' + learning_session_name + '_' + str(iteration_num) + '.csv'
+    if iteration_num > 0:
+       labels2add = folder_prefix + folder + learning_session_name + '/labels_' + str(iteration_num-1) + '.csv'
+       previous_iteration_spectra_file2 = folder_prefix + folder + learning_session_name + '/spectra2add_' + str(iteration_num-1)+'.csv'
        training_set_csv_new = training_set_csv1[0:len(training_set_csv1)-5]+str(iteration_num)+'.csv'
        if not(os.path.exists(training_set_csv_new)):
            try:
               training_set_addition_csv = "training_set_addition.csv"
-              pe=dh.prepare_spectra2add(previous_iteration_spectra_file2,labels2add,training_set_addition_csv,batch_size)
+              pe=dh.prepare_spectra2add(previous_iteration_spectra_file2,labels2add,training_set_addition_csv,batch_size,number_of_lines(labels2add))
               cmd = "cp '{0}' '{1}' ".format(training_set_csv_old,training_set_csv_new)
               os.system(cmd)
               cmd = "tail -n+2 '{0}' >> '{1}'".format(training_set_addition_csv,training_set_csv_new)
@@ -452,6 +483,7 @@ def run_active_learning(json_config_file):
               oracle_csv=label_random_samples(json_dict)
               to_label_csv = oracle_csv
            else:
+              print(training_set_csv)
               statistics=activeCnn(pool_csv,training_set_csv,len(cat_list),cat_list,candidate_classes,batch_size,random_sample_size)
               statistics_all = write_statistics(iteration_num,cat_list,statistics_csv,statistics,pe)
               try:
@@ -461,21 +493,14 @@ def run_active_learning(json_config_file):
               to_label_csv = 'to_label_csv.csv'
               cmd = "cat '{0}' '{1}' > '{2}'".format(oracle_csv,performance_estimation_csv,to_label_csv)
               os.system(cmd)
+    else:
+        run_active_learning = "no"
     try:
         to_label_size = sum(1 for line in open(to_label_csv))
         oracle_size = sum(1 for line in open(oracle_csv))
     except:
         to_label_size = 0
         oracle_size = 0
-    if 'batch_size' in json_dict:
-        batch_size = int(json_dict['batch_size'])
-        to_label_size2 = batch_size - random_sample_size
-        if to_label_size!= to_label_size2:
-           if to_label_size==0:
-              to_label_csv=label_random_samples(json_dict)
-              to_label_size = to_label_size2
-    else:
-        batch_size = random_sample_size + to_label_size
     csv_spectra_file2 = folder_prefix + folder + learning_session_name + '/spectra2add_' + str(iteration_num)+'.csv'
     b_read_spectra_from_fits_or_vot_files = 0
     if 'raw_spectra_source' in json_dict:
@@ -520,6 +545,8 @@ def run_active_learning(json_config_file):
         prediction_file="predictions.csv"
     else:
         prediction_file=to_label_csv
+    if run_active_learning == "no" or iteration_num == 0:
+        random_sample_size = 0
     html_code = _generate_spectra(folder_prefix,folder,processed_df,database_index,metadata_df,classes,prediction_file,random_sample_size,oracle_size,cat_list,metadata2show,iteration_num,spectra2add_fname,labels2add_fname,raw_spectra_source,statistics,learning_session_name)
     with open("./index.html", "w") as file:
         file.write(html_code)

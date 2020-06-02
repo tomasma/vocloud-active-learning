@@ -241,6 +241,7 @@ function transpose(matrix){
 	    }
 	}
 	else{
+	    //computePerformanceEstimate();
 	    save();
 	}
     }
@@ -477,6 +478,7 @@ function transpose(matrix){
 	if (n_labelled>0) performance_estimate_success_rate=100*n_in_agreement/n_labelled;
 	if (div_pe_created==1){
 	    text_perfest = 'Performance estimate: '+performance_estimate_success_rate+'%. ';
+	    //document.getElementById('pe').innerHTML=text_perfest;
 	    var div_pe=document.getElementById('div_pe');
     	    var para = document.createElement("P");
 	    para.setAttribute("align", "right");
@@ -484,6 +486,7 @@ function transpose(matrix){
 	    para.appendChild(cellText);
 	    div_pe.appendChild(para);
 	    div_pe.style.margin = '0';
+	    //document.getElementById('pe').nodeValue=text_perfest;
 	}
 	else{
 	    var div_pe=document.getElementById('div_pe');
@@ -521,7 +524,7 @@ function transpose(matrix){
 	var spectra2save='id,label,'+${wavelengths}+'\n';
 	var i=0;
 	for (var idx in label_list){
-	    if (i < random_sample_size + oracle_size){
+	    if (i < oracle_size){
 		if (label_num_list[idx]==null) label_num_list[idx]='';
 		if (comment_list[idx]=='undefined') comment_list[idx]='';
 		labels=labels+fname_list[idx]+','+label_num_list[idx]+','+comment_list[idx]+',\n';

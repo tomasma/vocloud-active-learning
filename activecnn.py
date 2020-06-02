@@ -1,7 +1,3 @@
-'''The activeCnn function runs the active learning convolution neural network iteration'''
-
-#author: Ondřej Podsztavek, slightly modified by Tomáš Mazel
-
 import csv
 import json
 
@@ -23,6 +19,7 @@ def activeCnn(pool_csv,training_set_csv,n_classes,cat_list,candidate_classes,bat
 
         # input files:
         # labelled training set
+        # TRAINING_SET_CSV = config["training_set_csv"]
         TRAINING_SET_CSV = training_set_csv
         # unlabelled target spectra
         POOL_CSV = pool_csv
@@ -44,8 +41,10 @@ def activeCnn(pool_csv,training_set_csv,n_classes,cat_list,candidate_classes,bat
             CANDIDATES_CSV = "candidates.csv"
         # parameters:
         # size of sample for performance estimation
+        #RANDOM_SAMPLE_SIZE = config["random_sample_size"]
         RANDOM_SAMPLE_SIZE = random_sample_size
         # number of spectra in a batch for labelling of oracle
+        #BATCH_SIZE = config["batch_size"]
         BATCH_SIZE = batch_size
 
     # load correctly data
@@ -82,6 +81,8 @@ def activeCnn(pool_csv,training_set_csv,n_classes,cat_list,candidate_classes,bat
        writer.writerows(zip(ids[rnd_idx], labels[rnd_idx],entropies[rnd_idx]))
 
     batch_idx = np.argsort(entropies)[-BATCH_SIZE:]
+    #print(batch_idx)
+    #print(entropies[batch_idx])
 
     # write CSV
     with open(ORACLE_CSV, 'w', newline='') as f:
@@ -98,6 +99,7 @@ def activeCnn(pool_csv,training_set_csv,n_classes,cat_list,candidate_classes,bat
     statistics = []
     for i in range(n_classes):
         statistics.append(len(labels[labels==i]))
+        #print('Statistics '+str(i)+': '+str(statistics[i]))
 
     #return statistics,ids,labels
     return statistics

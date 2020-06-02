@@ -1,4 +1,4 @@
-# Continue with a project – further iterations
+# Continue learning
 
 When an active learning job is completed (i.e. when on https://vocloud-dev.asu.cas.cz/vocloud-betelgeuse/jobs/index.xhtml the background color of your job turns green), go to the job `Details`.
 There, you will see a list of spectra that, in general, belong to 3 categories:

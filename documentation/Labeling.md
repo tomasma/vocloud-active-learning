@@ -1,4 +1,4 @@
-There, you will see a list of spectra that, in general, belong to 3 categories:
+When you go to the `Details` of your job, you will see a list of spectra that, in general, belong to 3 categories:
 - "oracle" set (white background color in the list): spectra that the convolutional neural network selected for expert evaluation because in case of these samples the network prediction had the highest level of uncertainty. Your labels will be stored and, in the next iteration, these samples will be added to the training set.  
 - "perf-est" set (green background color in the list): spectra that were randomly selected for the purpose of estimating network performance.
 - "candidates" (yellow background color in the list): spectra that the network selected as potentially interesting, i.e. belonging to the categories/classes of interest ("candidate classes"). These spectra will be displayed only in case your JSON configuration contained "show_candidates" option set to "yes". This is your potential result.
